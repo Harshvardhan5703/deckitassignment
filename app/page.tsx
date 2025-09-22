@@ -1,103 +1,379 @@
-import Image from "next/image";
+"use client";
+
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import Sidebar from '@/components/LeftSidebar';
+import TopToolbar from '@/components/TopBar';
+import SlideCanvas from '@/components/SlideCanvas';
+import BottomToolbar from '@/components/BottomToolBar';
+import FloatingToolbar from '@/components/FloatingToolBar';
+import { ElementType } from '@/types/elements';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [elements, setElements] = useState<ElementType[]>([
+    {
+      id: '1',
+      type: 'text',
+      content: 'India',
+      x: 200,
+      y: 150,
+      width: 500,
+      height: 120,
+      style: {
+        fontSize: '48px',
+        fontFamily: 'Inter',
+        fontWeight: 'bold',
+        color: '#ffffff',
+        backgroundColor: '#000000',
+        textAlign: 'left',
+        lineHeight: '1.2',
+        padding: '20px',
+      }
+    },
+    {
+      id: '2',
+      type: 'text',
+      content: 'Harsh',
+      x: 850,
+      y: 350,
+      width: 120,
+      height: 40,
+      style: {
+        fontSize: '24px',
+        fontFamily: 'Inter',
+        fontWeight: 'normal',
+        color: '#000000',
+        backgroundColor: 'transparent',
+        textAlign: 'right',
+        lineHeight: '1.4',
+      }
+    },
+    {
+      id: '3',
+      type: 'text',
+      content: '2025/09/22',
+      x: 850,
+      y: 390,
+      width: 120,
+      height: 30,
+      style: {
+        fontSize: '18px',
+        fontFamily: 'Inter',
+        fontWeight: 'normal',
+        color: '#666666',
+        backgroundColor: 'transparent',
+        textAlign: 'right',
+        lineHeight: '1.4',
+      }
+    },
+    {
+      id: '4',
+      type: 'shape',
+      content: '',
+      x: 50,
+      y: 100,
+      width: 120,
+      height: 400,
+      style: {
+        backgroundColor: '#CCFF00',
+        borderColor: 'transparent',
+        borderWidth: '0px',
+        borderRadius: '0px',
+      },
+      subtype: 'rectangle'
+    },
+    {
+      id: '5',
+      type: 'shape',
+      content: '',
+      x: 300,
+      y: 450,
+      width: 400,
+      height: 60,
+      style: {
+        backgroundColor: '#CCFF00',
+        borderColor: 'transparent',
+        borderWidth: '0px',
+        borderRadius: '0px',
+      },
+      subtype: 'rectangle'
+    },
+    {
+      id: '6',
+      type: 'shape',
+      content: '',
+      x: 700,
+      y: 450,
+      width: 300,
+      height: 60,
+      style: {
+        backgroundColor: '#000000',
+        borderColor: 'transparent',
+        borderWidth: '0px',
+        borderRadius: '0px',
+      },
+      subtype: 'rectangle'
+    }
+  ]);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(100);
+  const [floatingToolbar, setFloatingToolbar] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    elementId: string | null;
+  }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    elementId: null
+  });
+
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  const handleElementSelect = useCallback((elementId: string) => {
+    setSelectedElement(elementId);
+  }, []);
+
+  const handleElementDoubleClick = useCallback((elementId: string, x: number, y: number) => {
+    const element = elements.find(el => el.id === elementId);
+    if (!element) return;
+    
+    setFloatingToolbar({
+      visible: true,
+      x,
+      y: y - 60,
+      elementId
+    });
+  }, [elements]);
+
+  const handleElementUpdate = useCallback((elementId: string, updates: Partial<ElementType>) => {
+    setElements(prev => prev.map(el => 
+      el.id === elementId ? { ...el, ...updates } : el
+    ));
+  }, []);
+
+  const getElementDefaults = (type: string, subtype?: string) => {
+    const baseDefaults = {
+      x: 400,
+      y: 300,
+    };
+
+    switch (type) {
+      case 'text':
+        return {
+          ...baseDefaults,
+          content: 'New text element',
+          width: 200,
+          height: 40,
+          style: {
+            fontSize: '16px',
+            fontFamily: 'Inter',
+            fontWeight: 'normal',
+            color: '#000000',
+            backgroundColor: 'transparent',
+            textAlign: 'left',
+            lineHeight: '1.5',
+            padding: '8px',
+          }
+        };
+
+      case 'shape':
+        const shapeDefaults = {
+          ...baseDefaults,
+          content: '',
+          width: subtype === 'circle' ? 100 : 150,
+          height: subtype === 'circle' ? 100 : 100,
+          subtype,
+          style: {
+            backgroundColor: '#3B82F6',
+            borderColor: '#1E40AF',
+            borderWidth: '2px',
+            borderRadius: subtype === 'circle' ? '50%' : subtype === 'rectangle' ? '8px' : '0px',
+          }
+        };
+
+        if (subtype === 'triangle') {
+          shapeDefaults.style.backgroundColor = 'transparent';
+          shapeDefaults.style.borderColor = '#3B82F6';
+          shapeDefaults.style.borderWidth = '0px';
+        }
+
+        return shapeDefaults;
+
+      case 'line':
+        return {
+          ...baseDefaults,
+          content: '',
+          width: 200,
+          height: subtype === 'straight' ? 2 : 4,
+          subtype,
+          style: {
+            backgroundColor: subtype === 'dotted' ? 'transparent' : '#000000',
+            borderColor: subtype === 'dotted' ? '#000000' : 'transparent',
+            borderWidth: subtype === 'dotted' ? '2px' : '0px',
+            borderStyle: subtype === 'dotted' ? 'dotted' : 'solid',
+            borderRadius: '0px',
+          }
+        };
+
+      case 'icon':
+        return {
+          ...baseDefaults,
+          content: subtype || 'smile',
+          width: 60,
+          height: 60,
+          subtype,
+          style: {
+            color: '#3B82F6',
+            backgroundColor: 'transparent',
+            fontSize: '48px',
+          }
+        };
+
+      case 'image':
+        return {
+          ...baseDefaults,
+          content: 'https://via.placeholder.com/200x150?text=Image',
+          width: 200,
+          height: 150,
+          style: {
+            borderRadius: '8px',
+            objectFit: 'cover',
+          }
+        };
+
+      case 'table':
+        return {
+          ...baseDefaults,
+          content: JSON.stringify({
+            rows: 3,
+            cols: 3,
+            data: Array(3).fill(null).map(() => Array(3).fill('Cell'))
+          }),
+          width: 300,
+          height: 150,
+          style: {
+            backgroundColor: '#ffffff',
+            borderColor: '#D1D5DB',
+            borderWidth: '1px',
+            borderRadius: '8px',
+          }
+        };
+
+      default:
+        return {
+          ...baseDefaults,
+          content: '',
+          width: 100,
+          height: 100,
+          style: {
+            backgroundColor: '#E5E7EB',
+            borderColor: '#9CA3AF',
+            borderWidth: '1px',
+            borderRadius: '4px',
+          }
+        };
+    }
+  };
+
+  const handleAddElement = useCallback((type: 'text' | 'shape' | 'image' | 'line' | 'table' | 'icon', subtype?: string, content?: string) => {
+    const elementDefaults = getElementDefaults(type, subtype);
+    
+    const newElement: ElementType = {
+      id: Date.now().toString(),
+      type,
+      ...elementDefaults,
+      content: content ?? elementDefaults.content,
+    };
+
+    setElements(prev => [...prev, newElement]);
+    setSelectedElement(newElement.id);
+  }, []);
+
+  const handleZoomChange = useCallback((newZoom: number) => {
+    setZoomLevel(newZoom);
+  }, []);
+
+  const hideFloatingToolbar = useCallback(() => {
+    setFloatingToolbar(prev => ({ ...prev, visible: false }));
+  }, []);
+
+  const handleCanvasClick = useCallback((e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      setSelectedElement(null);
+      hideFloatingToolbar();
+    }
+  }, [hideFloatingToolbar]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        hideFloatingToolbar();
+        setSelectedElement(null);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [hideFloatingToolbar]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (floatingToolbar.visible && !e.target?.closest?.('.floating-toolbar')) {
+        hideFloatingToolbar();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [floatingToolbar.visible, hideFloatingToolbar]);
+
+  return (
+    <div className="h-screen bg-gray-100 flex flex-col">
+      {/* Top Navigation */}
+      <TopToolbar />
+      
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar */}
+        <Sidebar />
+        
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col bg-gray-200 relative">
+          {/* Canvas Area */}
+          <div className="flex-1 flex items-center justify-center p-8">
+            <SlideCanvas
+              ref={canvasRef}
+              elements={elements}
+              selectedElement={selectedElement}
+              onElementSelect={handleElementSelect}
+              onElementDoubleClick={handleElementDoubleClick}
+              onElementUpdate={handleElementUpdate}
+              onCanvasClick={handleCanvasClick}
+              zoomLevel={zoomLevel}
+              onZoomChange={handleZoomChange}
+            /> 
+          </div>
+
+          {/* Bottom Toolbar */}
+          <BottomToolbar 
+            onAddElement={handleAddElement} 
+            zoomLevel={zoomLevel} 
+            onZoomChange={handleZoomChange}
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
+
+      {/* Floating Toolbar */}
+      {floatingToolbar.visible && floatingToolbar.elementId && (
+        <FloatingToolbar
+          element={elements.find(el => el.id === floatingToolbar.elementId)!}
+          x={floatingToolbar.x}
+          y={floatingToolbar.y}
+          onUpdate={(updates) => handleElementUpdate(floatingToolbar.elementId!, updates)}
+          onClose={hideFloatingToolbar}
+        />
+      )} 
     </div>
   );
 }
