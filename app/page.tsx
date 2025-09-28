@@ -24,9 +24,10 @@ export default function Home() {
         fontWeight: 'bold',
         color: '#ffffff',
         backgroundColor: '#000000',
-        textAlign: 'left',
+        textAlign: 'center',
         lineHeight: '1.2',
         padding: '20px',
+        borderRadius: '8px',
       }
     },
     {
@@ -47,6 +48,7 @@ export default function Home() {
         lineHeight: '1.4',
       }
     },
+   
     {
       id: '3',
       type: 'text',
@@ -65,6 +67,7 @@ export default function Home() {
         lineHeight: '1.4',
       }
     },
+   
     {
       id: '4',
       type: 'shape',
@@ -73,13 +76,13 @@ export default function Home() {
       y: 100,
       width: 120,
       height: 400,
+      subtype: 'rectangle', 
       style: {
         backgroundColor: '#CCFF00',
         borderColor: 'transparent',
         borderWidth: '0px',
         borderRadius: '0px',
-      },
-      subtype: 'rectangle'
+      }
     },
     {
       id: '5',
@@ -89,13 +92,13 @@ export default function Home() {
       y: 450,
       width: 400,
       height: 60,
+      subtype: 'rectangle', 
       style: {
         backgroundColor: '#CCFF00',
         borderColor: 'transparent',
         borderWidth: '0px',
         borderRadius: '0px',
-      },
-      subtype: 'rectangle'
+      }
     },
     {
       id: '6',
@@ -105,14 +108,15 @@ export default function Home() {
       y: 450,
       width: 300,
       height: 60,
+      subtype: 'rectangle', 
       style: {
         backgroundColor: '#000000',
         borderColor: 'transparent',
         borderWidth: '0px',
         borderRadius: '0px',
-      },
-      subtype: 'rectangle'
-    }
+      }
+    },
+    
   ]);
 
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
@@ -131,13 +135,16 @@ export default function Home() {
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
+
   const handleElementSelect = useCallback((elementId: string) => {
     setSelectedElement(elementId);
+    setFloatingToolbar(prev => (prev.elementId === elementId && prev.visible) ? prev : { ...prev, visible: false }); 
   }, []);
 
   const handleElementDoubleClick = useCallback((elementId: string, x: number, y: number) => {
     const element = elements.find(el => el.id === elementId);
     if (!element) return;
+    
     
     setFloatingToolbar({
       visible: true,
@@ -153,7 +160,23 @@ export default function Home() {
     ));
   }, []);
 
-  const getElementDefaults = (type: string, subtype?: string) => {
+  const handleZoomChange = useCallback((newZoom: number) => {
+    setZoomLevel(newZoom);
+  }, []);
+
+  const hideFloatingToolbar = useCallback(() => {
+    setFloatingToolbar(prev => ({ ...prev, visible: false }));
+  }, []);
+
+  const handleCanvasClick = useCallback((e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      setSelectedElement(null);
+      hideFloatingToolbar();
+    }
+  }, [hideFloatingToolbar]);
+
+ 
+  const getElementDefaults = (type: string, subtype?: string, content?: string) => {
     const baseDefaults = {
       x: 400,
       y: 300,
@@ -163,7 +186,7 @@ export default function Home() {
       case 'text':
         return {
           ...baseDefaults,
-          content: 'New text element',
+          content: content || 'New text element',
           width: 200,
           height: 40,
           style: {
@@ -175,6 +198,27 @@ export default function Home() {
             textAlign: 'left',
             lineHeight: '1.5',
             padding: '8px',
+          }
+        };
+//  tempaltes for html elements
+      case 'html': 
+        const templates: { [key: string]: string } = {
+          // button: '<button style="padding: 12px 24px; background: #3B82F6; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600;">Click Me</button>',
+          // card: '<div style="padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"><h3 style="margin: 0 0 10px 0;">Card Title</h3><p style="margin: 0; color: #666;">Card content goes here.</p></div>',
+          // header: '<h1 style="font-size: 32px; font-weight: bold; margin: 0;">Header</h1>',
+          // custom: '<div style="padding: 20px; background: white; border: 2px dashed #ccc; border-radius: 8px; text-align: center;"><p>Edit this HTML</p></div>'
+        };
+
+        return {
+          ...baseDefaults,
+          content: content || templates[subtype || 'custom'],
+          width: subtype === 'button' ? 150 : 300,
+          height: subtype === 'button' ? 50 : 200,
+          style: {
+            backgroundColor: 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }
         };
 
@@ -227,7 +271,7 @@ export default function Home() {
           style: {
             color: '#3B82F6',
             backgroundColor: 'transparent',
-            fontSize: '48px',
+            fontSize: '48px', // Used by SlideElement for icon size calculation
           }
         };
 
@@ -244,13 +288,14 @@ export default function Home() {
         };
 
       case 'table':
+        const tableContent = {
+          rows: 3,
+          cols: 3,
+          data: Array(3).fill(null).map(() => Array(3).fill('Cell'))
+        };
         return {
           ...baseDefaults,
-          content: JSON.stringify({
-            rows: 3,
-            cols: 3,
-            data: Array(3).fill(null).map(() => Array(3).fill('Cell'))
-          }),
+          content: JSON.stringify(tableContent),
           width: 300,
           height: 150,
           style: {
@@ -277,34 +322,22 @@ export default function Home() {
     }
   };
 
-  const handleAddElement = useCallback((type: 'text' | 'shape' | 'image' | 'line' | 'table' | 'icon', subtype?: string, content?: string) => {
-    const elementDefaults = getElementDefaults(type, subtype);
+
+  const handleAddElement = useCallback((type: 'text' | 'shape' | 'image' | 'line' | 'table' | 'icon' | 'html', subtype?: string, content?: string) => {
+    const elementDefaults = getElementDefaults(type, subtype, content);
     
     const newElement: ElementType = {
       id: Date.now().toString(),
       type,
       ...elementDefaults,
       content: content ?? elementDefaults.content,
+      subtype: subtype ?? elementDefaults.subtype,
     };
 
     setElements(prev => [...prev, newElement]);
     setSelectedElement(newElement.id);
   }, []);
 
-  const handleZoomChange = useCallback((newZoom: number) => {
-    setZoomLevel(newZoom);
-  }, []);
-
-  const hideFloatingToolbar = useCallback(() => {
-    setFloatingToolbar(prev => ({ ...prev, visible: false }));
-  }, []);
-
-  const handleCanvasClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      setSelectedElement(null);
-      hideFloatingToolbar();
-    }
-  }, [hideFloatingToolbar]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -320,6 +353,7 @@ export default function Home() {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+     
       if (floatingToolbar.visible && !e.target?.closest?.('.floating-toolbar')) {
         hideFloatingToolbar();
       }
@@ -367,11 +401,13 @@ export default function Home() {
       {/* Floating Toolbar */}
       {floatingToolbar.visible && floatingToolbar.elementId && (
         <FloatingToolbar
+         
           element={elements.find(el => el.id === floatingToolbar.elementId)!}
           x={floatingToolbar.x}
           y={floatingToolbar.y}
           onUpdate={(updates) => handleElementUpdate(floatingToolbar.elementId!, updates)}
           onClose={hideFloatingToolbar}
+         
         />
       )} 
     </div>

@@ -30,24 +30,21 @@ const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Convert zoom level from percentage to decimal for calculations
   const zoom = zoomLevel / 100;
 
   // Handle zoom with mouse wheel
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey) {
       e.preventDefault();
-      const zoomFactor = 10; // 10% increments
-      const delta = e.deltaY > 0 ? -zoomFactor : zoomFactor;
+      const zooml = 10; // 10% increments
+      const delta = e.deltaY > 0 ? -zooml : zooml;
       const newZoomLevel = Math.max(10, Math.min(300, zoomLevel + delta));
       
-      // Calculate zoom origin (mouse position relative to container)
       const rect = containerRef.current?.getBoundingClientRect();
       if (rect) {
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
         
-        // Calculate the position adjustment to zoom toward the mouse
         const zoomRatio = (newZoomLevel / 100) / zoom;
         const newX = position.x * zoomRatio + (mouseX * (1 - zoomRatio));
         const newY = position.y * zoomRatio + (mouseY * (1 - zoomRatio));
@@ -60,7 +57,7 @@ const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
     }
   };
 
-  // Handle panning with middle mouse button or ctrl + drag
+  //  ctrl + drag
   const handleMouseDown = (e: React.MouseEvent) => {
     // Only start panning with middle mouse button or when ctrl is pressed
     if (e.button === 1 || e.ctrlKey) {
@@ -106,7 +103,7 @@ const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
     onZoomChange(newZoom);
   };
 
-  // Add keyboard shortcuts for zooming
+  //  keyboard shortcuts for zooming
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === '0') {
